@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Secret Message Encoder</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Roboto', Arial, sans-serif;
+      background: linear-gradient(135deg, #f6f8fa, #e9eff5);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    header { text-align: center; margin-bottom: 20px; }
+    header h1 { font-size: clamp(24px, 5vw, 36px); color: #333; }
+    .container {
+      background: #fff;
+      width: 100%;
+      max-width: 500px;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .tabs { display: flex; margin-bottom: 15px; border-bottom: 2px solid #eee; }
+    .tab {
+      flex: 1; padding: 12px; text-align: center; cursor: pointer;
+      font-weight: 700; color: #555; background-color: #f4f4f4;
+      border-radius: 8px 8px 0 0; margin-right: 5px; transition: 0.3s;
+    }
+    .tab.active { background-color: #007bff; color: #fff; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    label { display: block; margin-bottom: 5px; font-weight: 700; color: #333; }
+    textarea, input, select {
+      width: 100%; padding: 10px; margin-bottom: 10px;
+      border: 1px solid #ccc; border-radius: 4px; font-size: 1rem;
+    }
+    textarea { resize: vertical; min-height: 100px; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; }
+    button {
+      width: 100%; padding: 12px; border: none;
+      border-radius: 4px; font-size: 1rem; font-weight: 700;
+      cursor: pointer; transition: background-color 0.3s;
+    }
+    button:hover { opacity: 0.8; }
+    .encrypt-button { background-color: #fc1303; color: #fff; }
+    .decrypt-button { background-color: #011a03; color: #fff; }
+    #copy-btn { margin-top: 10px; background-color: #007bff; color: #fff; }
+    #result {
+      background-color: #e9eff5; padding: 15px; border-radius: 4px;
+      min-height: 80px; margin-top: 10px; font-size: 0.95rem; color: #333;
+      word-break: break-word; overflow-wrap: break-word; white-space: pre-wrap;
+    }
+    /* New styles for character counter and message area */
+    .char-counter {
+      text-align: right;
+      font-size: 0.9rem;
+      color: #666;
+      margin-bottom: 10px;
+    }
+    //.message-area {
+    //  margin-top: 20px;
+    //  font-size: 1rem;
+    //  text-align: left;
+    //  min-height: 1.2em;
+    //}
+	.message-area {
+	  display: flex;
+	  align-items: center;
+	  height: 3em;
+	}
+    .message-area.error { color: #dc3545; }
+    .message-area.success { color: #28a745; }
+	
+	/* Default (light mode) styles */
+	body {
+	  background: linear-gradient(135deg, #f6f8fa, #e9eff5);
+	  color: #333;
+	}
+	
+	/* Labels and headers (Light Mode) */
+	label, header h1 {
+	  color: #333;
+	}
+
+	/* Dark mode styles */
+	body.dark-mode {
+	  background: #222;
+	  color: #ddd;
+	}
+
+	/* Labels and headers in Dark Mode */
+	body.dark-mode label,
+	body.dark-mode header h1 {
+	  color: #fff;
+	}
+	
+	/* Example: Adjust container background in dark mode */
+	.container {
+	  background: #fff;
+	}
+
+	body.dark-mode .container {
+	  background: #333;
+	}
+	
+/* Button adjustments for better visibility in dark mode */
+body.dark-mode #theme-toggle {
+  background-color: #f0ad4e;
+  color: #222;
+}	
+
+body.dark-mode #theme-toggle:hover {
+  background-color: #ec971f;
+}
+
+/* Default (Light Mode) */
+.char-counter {
+  text-align: right;
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 10px;
+  transition: color 0.3s;
+}
+
+/* Dark Mode */
+body.dark-mode .char-counter {
+  color: #bbb;
+}
+	
+.theme-toggle-container {
+  text-align: right;
+  margin-bottom: 30px; /* Adjust spacing as needed */
+}
+
+#theme-toggle {
+  padding: 8px 16px;
+  font-size: 1rem;
+  border: none;
+  background-color: #007bff;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+#theme-toggle:hover {
+  background-color: #0056b3;
+}
+
+}
+
+  </style>
+</head>
+<body>
+
+  <header><h1>Secret Message Encoder</h1></header>
+
+
+  <div class="container">
+  <div class="theme-toggle-container">
+  <button id="theme-toggle">Dark Mode</button>
+</div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('encrypt')">Encrypt</div>
+      <div class="tab" onclick="switchTab('decrypt')">Decrypt</div>
+    </div>
+
+    <!-- ENCRYPTION SECTION -->
+    <div id="encrypt-content" class="tab-content active">
+      <label for="encrypt-message">Message:</label>
+      <textarea id="encrypt-message" placeholder="Enter your message" maxlength="100"></textarea>
+      <div id="encrypt-char-counter" class="char-counter">0/100</div>
+
+      <div class="row">
+        <div style="flex: 1;">
+          <label for="encrypt-key1">Secret Word 1:</label>
+          <input type="text" id="encrypt-key1" placeholder="Secret Word 1">
+        </div>
+        <div style="flex: 1;">
+          <label for="encrypt-key2">Secret Word 2:</label>
+          <input type="text" id="encrypt-key2" placeholder="Secret Word 2">
+        </div>
+      </div>
+
+      <label for="output-mode">Output Mode:</label>
+      <select id="output-mode">
+        <option value="text">Text</option>
+        <option value="emoji">Emoji</option>
+      </select>
+      <button class="encrypt-button" onclick="encrypt()">Encrypt</button>
+      <div id="encrypt-message-area" class="message-area"></div>
+    </div>
+
+    <!-- DECRYPTION SECTION -->
+    <div id="decrypt-content" class="tab-content">
+      <label for="decrypt-message">Encrypted Message:</label>
+      <textarea id="decrypt-message" placeholder="Enter encrypted message"></textarea>
+
+      <div class="row">
+        <div style="flex: 1;">
+          <label for="decrypt-key1">Secret Word 1:</label>
+          <input type="text" id="decrypt-key1" placeholder="Secret Word 1">
+        </div>
+        <div style="flex: 1;">
+          <label for="decrypt-key2">Secret Word 2:</label>
+          <input type="text" id="decrypt-key2" placeholder="Secret Word 2">
+        </div>
+      </div>
+
+      <button class="decrypt-button" onclick="decrypt()">Decrypt</button>
+      <div id="decrypt-message-area" class="message-area"></div>
+    </div>
+
+    <label>Message Output:</label>
+    <div id="result"></div>
+    <button id="copy-btn" onclick="copyResult()">Copy to Clipboard</button>
+  </div>
+
+  <script>
+    // Switch between tabs
+    function switchTab(tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.querySelector(`.tab:nth-child(${tab === 'encrypt' ? 1 : 2})`).classList.add('active');
+      document.getElementById(`${tab}-content`).classList.add('active');
+    }
+
+    // Display messages (errors or success notifications) in the corresponding tab's message area
+    function displayMessage(tab, msg, type) {
+      const area = document.getElementById(tab + "-message-area");
+      area.textContent = msg;
+      area.classList.remove("error", "success");
+      if (type) {
+        area.classList.add(type);
+      }
+      // Auto-clear success messages after 2 seconds
+      if (type === "success") {
+        setTimeout(() => { area.textContent = ""; }, 2000);
+      }
+    }
+
+    // Get the active tab's message area (used by the copy function)
+    function getActiveMessageArea() {
+      const activeTabContent = document.querySelector(".tab-content.active");
+      return activeTabContent ? activeTabContent.querySelector(".message-area") : null;
+    }
+
+    // Validate a secret word: at least 5 characters and not all identical
+    function isValidSecretWord(word) {
+      if (word.length < 5) return false;
+      return !word.split('').every(char => char === word[0]);
+    }
+
+    // XOR-based encryption/decryption (symmetric)
+    function xorEncrypt(input, key) {
+      let output = "";
+      for (let i = 0; i < input.length; i++) {
+        output += String.fromCharCode(input.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+      }
+      return output;
+    }
+
+    // Mapping for Base64 characters to emojis
+    const emojiMapping = {
+      "A": "😀", "B": "😁", "C": "😂", "D": "🤣", "E": "😃", "F": "😄", "G": "😅", "H": "😆", "I": "😉", "J": "😊",
+      "K": "😋", "L": "😎", "M": "😍", "N": "😘", "O": "😗", "P": "😙", "Q": "😚", "R": "🙂", "S": "🤗", "T": "🤩",
+      "U": "🤔", "V": "🤨", "W": "😐", "X": "😑", "Y": "😶", "Z": "🙄",
+      "a": "😏", "b": "😣", "c": "😥", "d": "😮", "e": "🤐", "f": "😯", "g": "😪", "h": "😫", "i": "😴", "j": "😌",
+      "k": "😛", "l": "😜", "m": "😝", "n": "🤤", "o": "😒", "p": "😓", "q": "😔", "r": "😕", "s": "🙃", "t": "🤑",
+      "u": "😲", "v": "☹️", "w": "🙁", "x": "😖", "y": "😞", "z": "😟",
+      "0": "😤", "1": "😢", "2": "😭", "3": "😦", "4": "😧", "5": "😨", "6": "😩", "7": "🤯", "8": "😬", "9": "😰",
+      "+": "😱", "/": "😳", "=": "🤪"
+    };
+
+    // Convert a Base64 text string to its Emoji representation
+    function convertToEmoji(text) {
+      let emojiText = "";
+      for (let char of text) {
+        emojiText += emojiMapping[char] || char;
+      }
+      return emojiText;
+    }
+
+    // Convert an emoji string back to Base64 text
+    function convertEmojiToText(text) {
+      let reverseMapping = {};
+      for (let key in emojiMapping) {
+        reverseMapping[emojiMapping[key]] = key;
+      }
+      let textOutput = "";
+      for (let char of Array.from(text)) {
+        textOutput += reverseMapping[char] || char;
+      }
+      return textOutput;
+    }
+
+    // Encrypt function using XOR and Base64 encoding
+    function encrypt() {
+      const message = document.getElementById('encrypt-message').value.trim();
+      document.getElementById('result').textContent =""
+	  if (!message) {
+        displayMessage("encrypt", "Please enter a message to encrypt!", "error");
+        return;
+      }
+      if (message.length > 100) {
+        displayMessage("encrypt", "Message exceeds 100 characters limit!", "error");
+        return;
+      }
+
+      const secretKey1 = document.getElementById('encrypt-key1').value.trim();
+      const secretKey2 = document.getElementById('encrypt-key2').value.trim();
+      if (!secretKey1 || !secretKey2) {
+        displayMessage("encrypt", "Please enter both secret words!", "error");
+        return;
+      }
+      if (!isValidSecretWord(secretKey1) || !isValidSecretWord(secretKey2)) {
+        displayMessage("encrypt", "Secret words must be at least 5 characters!", "error");
+        return;
+      }
+
+      const key = secretKey1 + secretKey2;
+      const xorEncrypted = xorEncrypt(message, key);
+      let encrypted = btoa(xorEncrypted);
+
+      const outputMode = document.getElementById('output-mode').value;
+      if (outputMode === "emoji") {
+        encrypted = convertToEmoji(encrypted);
+      }
+
+      document.getElementById('result').textContent = encrypted;
+      displayMessage("encrypt", "Message Encrypted!", "success");
+    }
+
+    // Decrypt function that handles both text and emoji inputs
+    function decrypt() {
+	document.getElementById('result').textContent =""
+      let message = document.getElementById('decrypt-message').value.trim();
+      if (!message) {
+        displayMessage("decrypt", "Please enter an encrypted message!", "error");
+        return;
+      }
+
+      const secretKey1 = document.getElementById('decrypt-key1').value.trim();
+      const secretKey2 = document.getElementById('decrypt-key2').value.trim();
+      if (!secretKey1 || !secretKey2) {
+        displayMessage("decrypt", "Please enter both secret words!", "error");
+        return;
+      }
+      if (!isValidSecretWord(secretKey1) || !isValidSecretWord(secretKey2)) {
+        displayMessage("decrypt", "Secret words must be at least 5 characters and not all identical!", "error");
+        return;
+      }
+      const key = secretKey1 + secretKey2;
+
+      if (/[^A-Za-z0-9+/=]/.test(message)) {
+        message = convertEmojiToText(message);
+      }
+
+      try {
+        const base64Decoded = atob(message);
+        const decrypted = xorEncrypt(base64Decoded, key);
+        document.getElementById('result').textContent = decrypted;
+        displayMessage("decrypt", "Message Decrypted!", "success");
+      } catch (e) {
+        displayMessage("decrypt", "Failed to decrypt! Please check the encrypted message and secret words.", "error");
+      }
+    }
+
+    // Copy the output message to the clipboard
+    function copyResult() {
+      const resultText = document.getElementById('result').textContent;
+      if (!resultText) {
+        const activeMessageArea = getActiveMessageArea();
+        if (activeMessageArea) {
+          activeMessageArea.textContent = "No text to copy!";
+          activeMessageArea.classList.add("error");
+        }
+        return;
+      }
+
+      navigator.clipboard.writeText(resultText)
+        .then(() => {
+          const activeMessageArea = getActiveMessageArea();
+          if (activeMessageArea) {
+            activeMessageArea.textContent = "Message Copied!";
+            activeMessageArea.classList.remove("error");
+            activeMessageArea.classList.add("success");
+            setTimeout(() => { activeMessageArea.textContent = ""; }, 2000);
+          }
+        })
+        .catch(() => {
+          const activeMessageArea = getActiveMessageArea();
+          if (activeMessageArea) {
+            activeMessageArea.textContent = "Failed to copy!";
+            activeMessageArea.classList.add("error");
+          }
+        });
+    }
+
+    // Character counter for the encryption textarea
+    const encryptMessageTextarea = document.getElementById("encrypt-message");
+    const encryptCharCounter = document.getElementById("encrypt-char-counter");
+    encryptMessageTextarea.addEventListener("input", () => {
+      const currentLength = encryptMessageTextarea.value.length;
+      encryptCharCounter.textContent = `${currentLength}/100`;
+    });
+document.getElementById('theme-toggle').addEventListener('click', function() {
+document.body.classList.toggle('dark-mode');
+
+//document.getElementById('theme-toggle').addEventListener('click', function() {
+//  document.body.classList.toggle('dark-mode');
+
+  // Change button text based on the mode
+  if (document.body.classList.contains('dark-mode')) {
+    this.textContent = "Light Mode";
+  } else {
+    this.textContent = "Dark Mode";
+  }
+});
+
+// Set initial button text on page load
+window.onload = function() {
+  const themeToggleButton = document.getElementById('theme-toggle');
+  themeToggleButton.textContent = document.body.classList.contains('dark-mode') ? "Light Mode" : "Dark Mode";
+};
+
+  </script>
+
+</body>
+</html>
